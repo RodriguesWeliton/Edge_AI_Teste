@@ -29,9 +29,31 @@ model = None
 async def lifespan(app: FastAPI):
     global model
     model = YOLO("yolov8n.pt")
-    # Warm-up: compila os grafos PyTorch antes da primeira requisição real.
+
+    # Define os overrides ANTES do warm-up, garantindo que o predictor interno
+    # seja instanciado com os parâmetros corretos na primeira chamada.
+    #
+    # Por que iou=0.45?
+    #   O padrão do YOLOv8 (iou=0.7) permite sobreposição excessiva entre
+    #   bounding boxes candidatas, gerando caixas duplicadas para o mesmo objeto.
+    #   Reduzir para 0.45 torna o NMS mais agressivo na supressão de duplicatas.
+    #
+    # Por que agnostic_nms=True?
+    #   O YOLOv8 possui 3 cabeças de detecção (escalas P3/P4/P5 do FPN).
+    #   Para objetos grandes, múltiplas cabeças podem gerar caixas candidatas
+    #   com IoU > 0.45 entre si. O NMS padrão (class-specific) só suprime
+    #   caixas da MESMA classe — se duas cabeças atribuírem classes diferentes
+    #   ao mesmo objeto, ambas sobrevivem. Com agnostic_nms=True, o NMS compara
+    #   todas as caixas entre si independentemente da classe, eliminando o problema.
+    model.overrides.update({
+        "iou": 0.45,
+        "agnostic_nms": True,
+    })
+
+    # Warm-up: compila os grafos PyTorch antes da primeira requisição real,
+    # agora com os overrides já configurados no predictor.
     # Sem isso, a primeira chamada levaria 3–10x mais tempo (JIT compilation).
-    model(np.zeros((640, 640, 3), dtype=np.uint8), verbose=False)
+    model.predict(np.zeros((640, 640, 3), dtype=np.uint8), verbose=False)
     yield
 
 
@@ -103,9 +125,9 @@ async def detect_json(
     img = await download_image(url)
 
     inicio = time.perf_counter()
-    # iou=0.45: NMS mais agressivo — elimina bounding boxes sobrepostas do mesmo objeto.
-    # O padrão do YOLOv8 é 0.7, que permite sobreposição excessiva e gera caixas duplicadas.
-    results = model.predict(source=img, conf=confidence, iou=0.45, agnostic_nms=True, verbose=False)[0]
+    # iou e agnostic_nms já estão em model.overrides; passamos apenas
+    # o que varia por requisição (conf e verbose).
+    results = model.predict(source=img, conf=confidence, verbose=False)[0]
     tempo_ms = round((time.perf_counter() - inicio) * 1000, 2)
 
     detections = []
@@ -151,9 +173,9 @@ async def detect_image(
     _validar_confianca(confidence)
     img = await download_image(url)
 
-    # iou=0.45: NMS mais agressivo — elimina bounding boxes sobrepostas do mesmo objeto.
-    # O padrão do YOLOv8 é 0.7, que permite sobreposição excessiva e gera caixas duplicadas.
-    results = model.predict(source=img, conf=confidence, iou=0.45, agnostic_nms=True, verbose=False)[0]
+    # iou e agnostic_nms já estão em model.overrides; passamos apenas
+    # o que varia por requisição (conf e verbose).
+    results = model.predict(source=img, conf=confidence, verbose=False)[0]
     annotated = results.plot()  # anotação nativa da Ultralytics (BGR)
 
     _, encoded = cv2.imencode(".png", annotated)

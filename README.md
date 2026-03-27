@@ -94,10 +94,10 @@ curl "http://localhost:8000/detect/image?url=https://ultralytics.com/images/bus.
 ### 1. Instalar Docker na Raspberry Pi 5 (Debian Trixie)
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y docker.io docker-compose-v2
+curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 newgrp docker
+docker run hello-world
 ```
 
 ### 2. Clonar o repositório
