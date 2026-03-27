@@ -105,7 +105,7 @@ async def detect_json(
     inicio = time.perf_counter()
     # iou=0.45: NMS mais agressivo — elimina bounding boxes sobrepostas do mesmo objeto.
     # O padrão do YOLOv8 é 0.7, que permite sobreposição excessiva e gera caixas duplicadas.
-    results = model.predict(source=img, conf=confidence, iou=0.45, verbose=False)[0]
+    results = model.predict(source=img, conf=confidence, iou=0.45, agnostic_nms=True, verbose=False)[0]
     tempo_ms = round((time.perf_counter() - inicio) * 1000, 2)
 
     detections = []
@@ -153,7 +153,7 @@ async def detect_image(
 
     # iou=0.45: NMS mais agressivo — elimina bounding boxes sobrepostas do mesmo objeto.
     # O padrão do YOLOv8 é 0.7, que permite sobreposição excessiva e gera caixas duplicadas.
-    results = model.predict(source=img, conf=confidence, iou=0.45, verbose=False)[0]
+    results = model.predict(source=img, conf=confidence, iou=0.45, agnostic_nms=True, verbose=False)[0]
     annotated = results.plot()  # anotação nativa da Ultralytics (BGR)
 
     _, encoded = cv2.imencode(".png", annotated)
