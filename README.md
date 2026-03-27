@@ -103,7 +103,7 @@ newgrp docker
 ### 2. Clonar o repositório
 
 ```bash
-git clone https://github.com/RodriguesWeliton/Edge_AI_Tste.git
+git clone https://github.com/RodriguesWeliton/Edge_AI_Teste.git
 cd Edge_AI_Teste
 ```
 
