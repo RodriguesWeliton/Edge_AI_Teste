@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts   = "-v --tb=short"
+
+# Garante que o pytest encontre main.py na raiz do projeto
+pythonpath = ["."]

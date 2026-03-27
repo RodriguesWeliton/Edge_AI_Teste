@@ -1,0 +1,60 @@
+name: Testes Automatizados
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  testes:
+    name: Executar testes (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      # ── 1. Clonar o repositório ──────────────────────────────────────────
+      - name: Clonar repositório
+        uses: actions/checkout@v4.2.2
+
+      # ── 2. Configurar Python ─────────────────────────────────────────────
+      - name: Configurar Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # ── 3. Cache de dependências Python ──────────────────────────────────
+      - name: Cache do pip
+        uses: actions/cache@v4.2.3
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-${{ runner.os }}-${{ matrix.python-version }}-
+
+      # ── 4. Cache dos pesos do YOLOv8n ────────────────────────────────────
+      # Evita baixar ~6 MB a cada execução do workflow
+      - name: Cache dos pesos YOLOv8n
+        uses: actions/cache@v4.2.3
+        with:
+          path: ~/.config/Ultralytics
+          key: yolov8n-weights-v1
+
+      # ── 5. Instalar dependências ──────────────────────────────────────────
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      # ── 6. Executar os testes ─────────────────────────────────────────────
+      - name: Executar testes com pytest
+        run: pytest tests/ -v --tb=short
+
+      # ── 7. Publicar resultado dos testes (visível na aba "Summary") ──────
+      - name: Publicar resumo dos testes
+        if: always()
+        run: |
+          echo "## Resultado dos Testes" >> $GITHUB_STEP_SUMMARY
+          pytest tests/ -v --tb=short >> $GITHUB_STEP_SUMMARY 2>&1 || true

@@ -1,0 +1,26 @@
+services:
+  edge-ai-service:
+    build: .
+    container_name: metalforming_vision
+    ports:
+      - "8000:8000"
+
+    # Reinicia automaticamente em falhas e no boot da Raspberry Pi
+    restart: always
+
+    # Verifica a saúde do serviço a cada 30 s
+    # start_period: aguarda o modelo YOLOv8n carregar no primeiro boot
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Rotação de logs para não encher o cartão SD da Pi
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
